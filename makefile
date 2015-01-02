@@ -3,7 +3,7 @@ CFLAGS=-c -Wall
 LDFLAGS=
 SOURCES=disemvoweler20150101.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=disemvoweler
+EXECUTABLE=bin/disemvoweler
 
 all: $(SOURCES) $(EXECUTABLE)
 	
