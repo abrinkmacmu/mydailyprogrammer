@@ -52,6 +52,7 @@ int main(int argc, char *argv[]){
 	char guesschar = '\0';
 
 	while(true){
+		
 		// print menu with blanks and guesses
 		for(i=0; i<(int)strlen(guesswrd);i++){
 			if(NULL != strchr(guessedletters,guesswrd[i])){
@@ -101,6 +102,7 @@ int main(int argc, char *argv[]){
 			printf("\n***HANGMAN PROGRAM ENDING***\n\n");
 			return 0;
 		}
+	//printf("\033[2J"); // Clear screen
 	}
 }
 
