@@ -1,11 +1,15 @@
 /*
-	Maze solver using modified binary search tree
-	Maze indexing issue in create_maze function (work around in place)
+	the maze file was not reading correctly for arbitrarily large map.
+	Hoping C++ filestreaming will fix this issue
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
+#include<iostream>
+#include<fstream>
+#include<cstdio>
+#include<cstdlib>
+#include<string>
+using namespace std;
 
 struct nodestruct{
 	struct nodestruct * left;
@@ -26,47 +30,52 @@ struct Mazestruct {
 	
 };
 typedef struct Mazestruct Maze;
+/**************  MAZE OPERATIONS  ****************************
+1. read_maze
+2. print_maze
+3. destory_maze
+*/
 
-
-void create_maze(Maze *MAZE, char * filename){
-	
-	// open file and get maze data	
+void read_maze(Maze * MAZE, char *filename){
+	ifstream mfile;
+	mfile.open(filename);
+	if (0 == mfile.is_open()) { 
+		cout<<"maze file invalid, try again"<<endl;
+		return;
+	}
 	int x,y;
-	FILE * pFile;
-	pFile = fopen(filename, "r");
-	fscanf(pFile, "%d %d", &x, &y);
-	printf("\nmaze size is %d by %d\n", x,y);	
- 	MAZE->x = x;
-    MAZE->y = y;
-	// initalize maze array
+	mfile>> x >> y;
+	MAZE->x = x;
+	MAZE->y = y;
+	cout<< "input nums are "<< x << " and " << y<<endl;
 	MAZE->maze = (char**)malloc(x * sizeof(char*));
     for (int i = 0; i < x; i++) {
-        MAZE->maze[i] = (char*)malloc(sizeof(char*));
+        MAZE->maze[i] = (char*)malloc(y*sizeof(char*));
     }
-
-	// read file for maze characters
-	char dummy;
-	for(int i = 0; i<x;i++){
-		for(int j = 0; j<y+1; j++){
-			dummy = fgetc(pFile);
-			if(dummy == '\n'){
-				MAZE->maze[i][j] = '\0';
-				
-			} else if (j > 0){
-				MAZE->maze[i][j-1] = dummy; // MAZE indexing issue
-				//printf("%c",MAZE->maze[i][j]); // for debug
-			}
-
-			if(dummy == 'S'){
-				// this is start node
-				MAZE->starti = i;
-				MAZE->startj = j-1;
-			}	
-		}
-		//printf("\n"); // for debug
+	string readline;
+	getline(mfile,readline); // clears remainder of first line
+	for(int i = 0; i<y;i++){
+		getline(mfile,readline);
+		for(int j = 0; j<x;j++){
+			MAZE->maze[i][j] = readline[j];			
+			if(readline[j] == 'S'){
+			MAZE->starti = i;	
+			MAZE->startj = j;
+			}		
+		}		
 	}
-	//printf("\n"); // for debug
-	fclose(pFile);
+	mfile.close();
+	return;
+}
+
+void print_maze(Maze *MAZE){
+    for (int i = 0; i < MAZE->x; i++) {
+        for (int j = 0; j < MAZE->y; j++) {
+            cout<<MAZE->maze[i][j];
+        }
+        cout<<endl;
+    }
+	return;
 }
 
 void destroy_maze(Maze *MAZE){
@@ -76,36 +85,13 @@ void destroy_maze(Maze *MAZE){
     free(MAZE->maze);
     free(MAZE);
 }
+/*********************  LINKED LIST OPERATIONS ********************
+1. print_node
+2. insert_next_node
+3. search_for_ends
+4. mark_maze_solution
+5. destroy_node
 
-void print_maze(Maze *MAZE){
-    for (int i = 0; i < MAZE->x; i++) {
-        for (int j = 0; j < MAZE->y; j++) {
-            printf("%c", MAZE->maze[i][j]);
-        }
-        printf("\n");
-    }
-	printf("%c should be S\n",MAZE->maze[MAZE->starti][MAZE->startj]); // for debug
-	//printf("%c should be E\n",MAZE->maze[13][13]); // for debug
-	
-}
-
-void deltree(Node * tree)
-{
-    if (tree)
-    {
-        deltree(tree->left);
-        deltree(tree->right);
-        free(tree);
-    }
-}
-
-/*
-struct node * left;
-	struct node * right;
-	int i;
-	int j;
-	int numwalls;
-	int isdead;
 */
 void print_node(Node * NODE){
 	if(NULL == NODE){
@@ -116,27 +102,23 @@ void print_node(Node * NODE){
 	}
 	return;
 }
+
 void insert_next_node(Node ** tree,Maze *MAZE, int i, int j, int isend,int dist,char lastmove, Node ** prevnode){
 	// first check if input tree is NULL, if so... initalize	
 	Node *temp = NULL;
 	if(!(*tree)) {
-	printf("initializing new node\n");
-	temp = (Node *)malloc(sizeof(Node));
-	temp->left = temp->right = NULL;
-	temp->isend = isend;
-	temp->dist = dist;
-	temp->parent = (*prevnode);
-	temp->i = i;
-	temp->j = j;
-	*tree = temp;
+		temp = (Node *)malloc(sizeof(Node));
+		temp->left = temp->right = NULL;
+		temp->isend = isend;
+		temp->dist = dist;
+		temp->parent = (*prevnode);
+		temp->i = i;
+		temp->j = j;
+		*tree = temp;
 	}
 	// increment dist and insert next open space
-	
-	//printf("in insert_next_node [%d,%d] dist:%d isend:%d\n",i,j,dist,isend);
 	dist++;
-
 	if(' ' == MAZE->maze[i][j+1] and 'l' != lastmove ){
-		printf("moving right\n");
 		if(NULL == (*tree)->left) {
       		insert_next_node(&(*tree)->left, MAZE,i,(j+1),0,dist,'r',&(*tree));
   		 } else if(NULL == (*tree)->right){
@@ -144,7 +126,6 @@ void insert_next_node(Node ** tree,Maze *MAZE, int i, int j, int isend,int dist,
    		 }
 	}
 	if(' ' == MAZE->maze[i][j-1] and 'r' != lastmove){
-		printf("moving left\n");		
 		if(NULL == (*tree)->left) {
       		insert_next_node(&(*tree)->left, MAZE,i,(j-1),0,dist,'l',&(*tree));
   		 } else if(NULL == (*tree)->right){
@@ -152,15 +133,13 @@ void insert_next_node(Node ** tree,Maze *MAZE, int i, int j, int isend,int dist,
    		 }
 	}
 	if(' ' == MAZE->maze[i-1][j] and 'u' != lastmove){
-		printf("moving down\n");
 		if(NULL == (*tree)->left) {
       		insert_next_node(&(*tree)->left, MAZE,(i-1),j,0,dist,'d',&(*tree));
   		 } else if(NULL == (*tree)->right){
      		insert_next_node(&(*tree)->right, MAZE,(i-1),j,0,dist,'d',&(*tree));
    		 }
 	}
-	if(' ' == MAZE->maze[i+1][j] and 'd' != lastmove){
-		printf("moving up\n");		
+	if(' ' == MAZE->maze[i+1][j] and 'd' != lastmove){		
 		if(NULL == (*tree)->left) {
       		insert_next_node(&(*tree)->left, MAZE,(i+1),j,0,dist,'u',&(*tree));
   		 } else if(NULL == (*tree)->right){
@@ -169,15 +148,17 @@ void insert_next_node(Node ** tree,Maze *MAZE, int i, int j, int isend,int dist,
 	}
 	// also check for end condition
 	if('E' == MAZE->maze[i][j+1] and 'l' != lastmove ){
-		printf("moving right\n");
+		cout<<"found an end"<<endl;
+		print_node((*tree));
 		if(NULL == (*tree)->left) {
-      		insert_next_node(&(*tree)->left, MAZE,i,(j+1),0,dist,'r',&(*tree));
+      		insert_next_node(&(*tree)->left, MAZE,i,(j+1),1,dist,'r',&(*tree));
   		 } else if(NULL == (*tree)->right){
-     		insert_next_node(&(*tree)->right, MAZE,i,(j+1),0,dist,'r',&(*tree));
+     		insert_next_node(&(*tree)->right, MAZE,i,(j+1),1,dist,'r',&(*tree));
    		 }
 	}
-	if('E' == MAZE->maze[i][j-1] and 'r' != lastmove){
-		printf("moving left\n");		
+	if('E' == MAZE->maze[i][j-1] and 'r' != lastmove){	
+		cout<<"found an end"<<endl;
+		print_node((*tree));
 		if(NULL == (*tree)->left) {
       		insert_next_node(&(*tree)->left, MAZE,i,(j-1),1,dist,'l',&(*tree));
   		 } else if(NULL == (*tree)->right){
@@ -185,92 +166,95 @@ void insert_next_node(Node ** tree,Maze *MAZE, int i, int j, int isend,int dist,
    		 }
 	}
 	if('E' == MAZE->maze[i-1][j] and 'u' != lastmove){
-		printf("moving down\n");
+		cout<<"found an end"<<endl;
+		print_node((*tree));
 		if(NULL == (*tree)->left) {
       		insert_next_node(&(*tree)->left, MAZE,(i-1),j,1,dist,'d',&(*tree));
   		 } else if(NULL == (*tree)->right){
      		insert_next_node(&(*tree)->right, MAZE,(i-1),j,1,dist,'d',&(*tree));
    		 }
 	}
-	if('E' == MAZE->maze[i+1][j] and 'd' != lastmove){
-		printf("moving up\n");		
+	if('E' == MAZE->maze[i+1][j] and 'd' != lastmove){		
+		cout<<"found an end"<<endl;
+		print_node((*tree));
 		if(NULL == (*tree)->left) {
       		insert_next_node(&(*tree)->left, MAZE,(i+1),j,1,dist,'u',&(*tree));
   		 } else if(NULL == (*tree)->right){
      		insert_next_node(&(*tree)->right, MAZE,(i+1),j,1,dist,'u',&(*tree));
    		 }
 	}
-	print_node((*tree));
 	return;
 }
 
-
 void search_ends(Node ** tree,Node **retnode){
 	if(NULL == (*tree)){
-		printf("returning\n");
-        return;
-		
+        return;		
     }
-
-    if( 0 == (*tree)->isend){
-        search_ends(&((*tree)->left),retnode);
-		search_ends(&((*tree)->right),retnode);		
-	}
 	if( (*tree)->isend){
 		printf("found End node\n");		
 		(*retnode)= (*tree);
 		print_node(*retnode);
-
 		return;
+	}else{
+		search_ends(&((*tree)->left),retnode);
+		search_ends(&((*tree)->right),retnode);
 	}
-	//printf("returning NULL\n");
-	//return NULL;
 }
 
 void mark_maze_solution(Node ** tree, Maze * MAZE){   
-	if(NULL == (*tree)->parent){
-		printf("debug 2\n");       
+	if(NULL == (*tree)->parent){       
 		 return;
     }
-		printf("at [%d,%d] in markup\n",(*tree)->i,(*tree)->j);
-		MAZE->maze[(*tree)->i][(*tree)->j] = '*';			
-		mark_maze_solution(&(*tree)->parent,MAZE);
-	
+	MAZE->maze[(*tree)->i][(*tree)->j] = '*';			
+	mark_maze_solution(&(*tree)->parent,MAZE);	
 	return;
 }
 
+void destroy_node(Node * tree){
+    if (tree){
+        destroy_node(tree->left);
+        destroy_node(tree->right);
+        free(tree);
+    }
+}
 
+/* **********************  MAIN *************************/
 int main(int argc, char *argv[]){
-	// import maze size and maze array
-	if(argc != 2){
-		printf("need a maze file... exiting\n");
-		return 0;
+	cout<< "\n **Starting Maze solver program**\n"<<endl;
+	if (argc != 2){
+		cout<<"please input a maze file"<<endl;
 	}
-	printf("inputted maze file: %s\n", argv[1]);
-	Maze *mymaze = (Maze *)malloc(sizeof(Maze));
-	create_maze(mymaze,argv[1]);
+	cout<<"input maze file is: "<< argv[1]<<endl;
+
+	Maze *mymaze = (Maze *)malloc(sizeof(Maze));	
+	read_maze(mymaze,argv[1]);
 	print_maze(mymaze);
+	cout<< "Maze start found at "<< mymaze->starti<< " "<<mymaze->startj<<endl;
 	// initalize root
 	Node *root = (Node *)malloc(sizeof(Node));
+	Node *theend = (Node *)malloc(sizeof(Node));
 	root->left = root->right = NULL;
-	root->parent = NULL;
+	root->parent =  NULL;
 	root->dist = 0;
 	root->isend = 0;
+	root->i = mymaze->starti;
+	root->j = mymaze->startj;
+	print_node(root);
+	cout<< "beginning insert_next_node"<<endl;
 	insert_next_node(&(root), mymaze,mymaze->starti,mymaze->startj,0,0,'a',NULL);
-	Node *theend;
-
+	theend = NULL;
+	cout<< "beginning search_ends"<<endl;
 	search_ends(&(root),&(theend));
-	print_node(theend);
 	if(NULL == theend){
-		printf("Couldn't find the end, no solution");
+		cout<<"could not find solution..."<<endl;
 	}else{
+		cout<< "found solution, Marking solution on Maze..."<<endl;
 		mark_maze_solution(&(theend->parent),mymaze);
 		print_maze(mymaze);
 	}
 
-	printf("deleting BST...");
-	deltree(root);
-	printf("exiting\n");
+    destroy_maze(mymaze);
+	destroy_node(root);
+	cout<<"**Exiting**"<<endl;
 	return 0;
-}
-
+}	
